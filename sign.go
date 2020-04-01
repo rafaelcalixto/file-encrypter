@@ -8,6 +8,7 @@ import (
     "encoding/pem"
     "errors"
     "fmt"
+    "io/ioutil"
 )
 
 // Genetare RSA Keys
@@ -18,7 +19,7 @@ func GenerateKeys() (*rsa.PrivateKey, *rsa.PublicKey) {
     return privatekey, &privatekey.PublicKey
 }
 
-func Keys2String(privKey *rsa.PrivateKey, publKey *rsa.PublicKey) (string, string) {
+func Keys2String(privKey *rsa.PrivateKey, publKey *rsa.PublicKey) ([]byte, []byte) {
     priv_bytes := x509.MarshalPKCS1PrivateKey(privKey)
     priv_pem := pem.EncodeToMemory(
         &pem.Block{
@@ -36,29 +37,41 @@ func Keys2String(privKey *rsa.PrivateKey, publKey *rsa.PublicKey) (string, strin
             Bytes : publ_bytes,
         },
     )
-    return string(priv_pem), string(publ_pem)
+    return priv_pem, publ_pem
 }
 
-// func String2Keys2String() ()
+func WriteKeys(privKey []byte, publKey []byte, fname string) {
+    errpriv := ioutil.WriteFile(fname + ".pem", privKey, 0644)
+    if errpriv != nil { errors.New("Error while trying to write the private key") }
+    errpub := ioutil.WriteFile(fname + "publickey", publKey, 0644)
+    if errpub != nil { errors.New("Error while trying to write the private key") }
+
+    fmt.Println("Key files generated.")
+}
 
 func main() {
-    mode := flag.Bool("v", false, "a bool")
-    createkeys := flag.Bool("generate", false, "a bool")
-    flag.Parse()
-    filename := flag.Args()
+    var filename string
+    opt_check := flag.Bool("v", false, "a bool")
+    opt_gen := flag.Bool("generate", false, "a bool")
 
+    flag.Parse()
+    args := flag.Args()
 
     // Getting keys
     privatekey, publicky := GenerateKeys()
 
     // Converting Keys to String
-    priv_key_str, pub_key_str := Keys2String(privatekey, publicky)
+    priv_key_bytes, pub_key_bytes := Keys2String(privatekey, publicky)
 
-    fmt.Println(priv_key_str, pub_key_str)
-    fmt.Println("mode: ", *mode)
-    fmt.Println(*createkeys)
-    fmt.Println(filename)
-    if len(filename) > 0 {
-        fmt.Println(filename)
+    if *opt_gen {
+        if len(args) == 0 {
+            filename = "standard"
+        } else {
+            filename = args[0]
+        }
+        WriteKeys(priv_key_bytes, pub_key_bytes, filename)
     }
+
+    fmt.Println("mode: ", *opt_check)
+    fmt.Println(*opt_gen)
 }
