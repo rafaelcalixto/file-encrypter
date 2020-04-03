@@ -28,24 +28,23 @@ func SignDoc(fname string) {
     secret, kname := krsa.GetRSAKeys(fname)
 
     // Write the signature into a file
-    err_file := ioutil.WriteFile(fname + ".sig", secret, 0644)
+    err_file := ioutil.WriteFile(fname + ".sign", secret, 0644)
     if err_file != nil { panic(err_file) }
 
     fmt.Println("Signature file '" + kname + ".sig' generated.")
 }
 
 func CheckSignature(fname string) {
-    // Get encrypted message
-    secret, kname := krsa.GetRSAKeys(fname)
-
-    // Read signature file
-    filesign, err_readfile := ioutil.ReadFile(kname + ".sig")
+    // Read original file
+    originalmsg, err_readfile := ioutil.ReadFile(fname)
     if err_readfile != nil { panic(err_readfile) }
 
+    // Read sign file
+    decryptmsg, kname := krsa.DecryptMsg(fname)
+
     fmt.Println("Comparing '" + fname + "' with signature '" + kname + ".sing'...")
-    res := bytes.Compare(secret, filesign)
-    fmt.Println(res)
-    if string(secret) == string(filesign) {
+    res := bytes.Compare(originalmsg, decryptmsg)
+    if res == 0 {
         fmt.Println("Congratulations! This signature is valid!")
     } else {
         fmt.Println("Ooops! The signature is NOT valid.")

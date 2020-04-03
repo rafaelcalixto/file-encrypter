@@ -105,18 +105,57 @@ func GetRSAKeys(fname string) ([]byte, string) {
 
     // Getting data to sign the document
     _, publicKey := String2Keys(string(privkey), string(pubkey))
-    message := []byte(string(file))
-    label := []byte("")
-    hash := sha256.New()
 
     secret, err_encrypt := rsa.EncryptOAEP(
-        hash,
+        sha256.New(),
         rand.Reader,
         publicKey,
-        message,
-        label,
+        []byte(string(file)),
+        []byte(""),
     )
     if err_encrypt != nil { panic(err_encrypt) }
 
     return secret, kname
+}
+
+func DecryptMsg(fname string) ([]byte, string) {
+    // Check if exists specifict keys to the file
+    files, err_ls := ioutil.ReadDir(".")
+    if err_ls != nil { panic(err_ls) }
+
+    var kname string
+    checksign := true
+    for _, f := range files {
+        if fname + ".sig" == f.Name() { checksign = false }
+    }
+    if checksign {
+        kname = "standard"
+    } else {
+        kname = fname
+    }
+
+    // Read signature file
+    filesign, err_readfile := ioutil.ReadFile(kname + ".sig")
+    if err_readfile != nil { panic(err_readfile) }
+
+    // Importing the RSA keys
+    privkey, err_readprivkey := ioutil.ReadFile(kname + ".pem")
+    if err_readprivkey != nil { panic(err_readprivkey) }
+
+    pubkey, err_readpublkey := ioutil.ReadFile(kname + ".publickey")
+    if err_readpublkey != nil { panic(err_readpublkey) }
+
+    // Getting data to sign the document
+    privatekey, _ := String2Keys(string(privkey), string(pubkey))
+
+    rawmsg, err_decrypt := rsa.DecryptOAEP(
+        sha256.New(),
+        rand.Reader,
+        privatekey,
+        []byte(string(filesign)),
+        []byte(""),
+    )
+    if err_decrypt != nil { panic(err_decrypt) }
+
+    return rawmsg, kname
 }
